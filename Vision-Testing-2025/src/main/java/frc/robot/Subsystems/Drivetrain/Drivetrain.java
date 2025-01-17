@@ -19,6 +19,7 @@ import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -38,7 +39,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
-
+import frc.robot.LimelightHelpers;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -70,11 +71,11 @@ public class Drivetrain extends SubsystemBase
   /**
    * Enable vision odometry updates while driving.
    */
-  // private final boolean             visionDriveTest     = false;
+  private final boolean             visionDriveTest     = false;
   // /**
   //  * PhotonVision class to keep an accurate odometry.
   //  */
-  // private       PoseEstimator             vision;
+  //       PoseEstimator             vision;
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -143,24 +144,28 @@ public class Drivetrain extends SubsystemBase
                                              Rotation2d.fromDegrees(0)));
   }
 
-  // /**
-  //  * Setup the photon vision class.
-  //  */
+  /**
+   * Setup the photon vision class.
+   */
   // public void setupPhotonVision()
   // {
-  //   vision = new Vision(swerveDrive::getPose, swerveDrive.field);
+  //   vision = new PoseEstimator(swerveDrive.kinematics, swerveDrive.od, null, null);
   // }
 
-  // @Override
-  // public void periodic()
-  // {
-  //   // When vision is enabled we must manually update odometry in SwerveDrive
-  //   if (visionDriveTest)
-  //   {
-  //     swerveDrive.updateOdometry();
-  //     vision.updatePoseEstimation(swerveDrive);
-  //   }
-  // }
+
+  @Override
+  public void periodic()
+  {
+    updateVisionOdometry();
+  }
+
+  public void updateVisionOdometry(){
+    LimelightHelpers.PoseEstimate limelightMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
+    if(limelightMeasurement.tagCount >= 2)
+    {
+      swerveDrive.addVisionMeasurement(limelightMeasurement.pose, limelightMeasurement.timestampSeconds, VecBuilder.fill(.7,.7,9999999));
+    }
+  }
 
   @Override
   public void simulationPeriodic()
@@ -243,7 +248,7 @@ public class Drivetrain extends SubsystemBase
    *
    * @return Distance to speaker in meters.
    */
-  public double getDistanceToSpeaker()
+  public double getDistanceToDesignatedTarget()
   {
     int allianceAprilTag = DriverStation.getAlliance().get() == Alliance.Blue ? 7 : 4;
     // Taken from PhotonUtils.getDistanceToPose
@@ -256,7 +261,7 @@ public class Drivetrain extends SubsystemBase
    *
    * @return {@link Rotation2d} of which you need to achieve.
    */
-  public Rotation2d getSpeakerYaw()
+  public Rotation2d getDesignatedTargetYaw()
   {
     int allianceAprilTag = DriverStation.getAlliance().get() == Alliance.Blue ? 7 : 4;
     // Taken from PhotonUtils.getYawToPose()
@@ -278,10 +283,10 @@ public class Drivetrain extends SubsystemBase
         () -> {
           ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(0, 0,
                                                    controller.headingCalculate(getHeading().getRadians(),
-                                                                               getSpeakerYaw().getRadians()),
+                                                                               getDesignatedTargetYaw().getRadians()),
                                                                        getHeading());
           drive(speeds);
-        }).until(() -> Math.abs(getSpeakerYaw().minus(getHeading()).getDegrees()) < tolerance);
+        }).until(() -> Math.abs(getDesignatedTargetYaw().minus(getHeading()).getDegrees()) < tolerance);
   }
 
   // /**
