@@ -14,6 +14,7 @@ public class Robot extends TimedRobot {
   private final RobotContainer m_robotContainer;
 
   public Robot() {
+    enableLiveWindowInTest(true); //TODO: do we like LiveWindow?
     m_robotContainer = new RobotContainer();
   }
 
